@@ -46,21 +46,21 @@ def ReSizeGLScene(Width, Height):
 
 g = 9.8 #gravitational acceleration
 pi = 3.1415926535897
-slope_length = 5.5
+slope_length = 3.5
 slope_width = 1.0
-slope_height = 0.5
+slope_height = 1.3
 slope_angle = atan2(slope_height, slope_length)
-plane_length = slope_length * 4
-deltaT = 0.015
+plane_length = slope_length
+deltaT = 0.025
 ring_radius = 0.3
 ring_z = -slope_width/2.0
 ring_center_x = 0.0
 ring_center_y = slope_height + ring_radius
-nob_at_ring = pi * 0.36
+nob_at_ring = pi * 0.45
 rotation_acceleration = 0.0  #radians/sec
 rotation_speed = 0.0
 mass_of_ring = 1.0
-mass_of_nob = 8.0
+mass_of_nob = 10.0
 
 def Initialize():
 	ring_center_x = 0.0
@@ -105,17 +105,45 @@ def DrawSlopeAndPlane():
 	glColor3f(0.0,1.0,0.0)
 	glVertex3f(slope_length,0.0,0.0)			# p2
 	glColor3f(0.0,0.0,1.0)						
-	glVertex3f(plane_length,0.0,0.0)			# p7
+	glVertex3f(slope_length+plane_length,0.0,0.0)			# p7
 	glColor3f(1.0,0.0,0.0)
-	glVertex3f(plane_length,0.0,-slope_width)	# p8
+	glVertex3f(slope_length+plane_length,0.0,-slope_width)	# p8
 
 	glColor3f(1.0,0.0,0.0)
-	glVertex3f(plane_length,0.0,-slope_width)	# p8
+	glVertex3f(slope_length+plane_length,0.0,-slope_width)	# p8
 	glColor3f(1.0,0.0,0.0)
 	glVertex3f(slope_length,0.0,-slope_width)	# p4
 	glColor3f(0.0,1.0,0.0)
 	glVertex3f(slope_length,0.0,0.0)			# p2
 
+	glColor3f(0.0,0.0,1.0)						
+	glVertex3f(slope_length+plane_length,0.0,0.0)		# p7
+	glColor3f(0.0,1.0,0.0)
+	glVertex3f(slope_length*2.0+plane_length,0.0,0.0)	# p9
+	glColor3f(0.0,1.0,0.0)
+	glVertex3f(slope_length*2.0+plane_length,slope_height,0.0)	# p10
+	
+	glColor3f(0.0,0.0,1.0)						
+	glVertex3f(slope_length+plane_length,0.0,0.0)		# p7
+	glColor3f(0.0,1.0,0.0)
+	glVertex3f(slope_length*2.0+plane_length,slope_height,0.0)	# p10
+	glColor3f(1.0,0.0,0.0)
+	glVertex3f(slope_length+plane_length,0.0,-slope_width)	# p8
+	
+	glColor3f(1.0,0.0,0.0)
+	glVertex3f(slope_length+plane_length,0.0,-slope_width)	# p8
+	glColor3f(0.0,1.0,0.0)
+	glVertex3f(slope_length*2.0+plane_length,slope_height,0.0)	# p10
+	glColor3f(0.0,0.0,1.0)
+	glVertex3f(slope_length*2.0+plane_length,slope_height,-slope_width)	# p11
+
+	glColor3f(1.0,0.0,0.0)
+	glVertex3f(slope_length+plane_length,0.0,-slope_width)	# p8
+	glColor3f(0.0,0.0,1.0)
+	glVertex3f(slope_length*2.0+plane_length,slope_height,-slope_width)	# p11
+	glColor3f(0.0,1.0,0.0)
+	glVertex3f(slope_length*2.0+plane_length,0.0,-slope_width)	# p12
+	
 	glEnd()
 
 def DrawRing(x, y, z, nobAngle, radius):
@@ -167,8 +195,7 @@ def DrawGLScene():
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	# Clear The Screen And The Depth Buffer
 	glLoadIdentity();					# Reset The View
-	glTranslatef(-1.3,-1.0,-3.0);			
-	glRotatef(rtri,0.0,1.0,0.0);		# Rotate The Pyramid On It's Y Axis
+	glTranslatef(-5.3,-1.5,-10.0);			
 
 	DrawSlopeAndPlane()
 	
@@ -179,36 +206,40 @@ def DrawGLScene():
 	if nob_at_ring < -2 * pi:
 		nob_at_ring += 2 * pi
 
-	if ring_center_x > slope_length + plane_length:
-		#reset to initial state
-		Initialize()
+	#calculate angular acceleration
+	if ring_center_x > slope_length and ring_center_x < slope_length + plane_length:
+		x_distance = rolledDistance
+		y_distance = 0.0
 	else:
-		#calculate angular acceleration
-		if ring_center_x > slope_length:
-			x_distance = rolledDistance
-			y_distance = 0.0
-		else:
-			#still on the slop
-			cos_theta = cos(slope_angle)
-			sin_theta = sin(slope_angle)
-			x_distance = rolledDistance * cos_theta
+		#still on the slop
+		cos_theta = cos(slope_angle)
+		sin_theta = sin(slope_angle)
+		x_distance = rolledDistance * cos_theta
+		if ring_center_x < slope_length:
 			y_distance = -rolledDistance * sin_theta
-
-		ring_center_x += x_distance
-		ring_center_y += y_distance
-
-		if ring_center_x > slope_length:
-			referenceX = ring_center_x
-			referenceY = ring_center_y - ring_radius
 		else:
-			referenceX = ring_center_x - ring_radius * sin(slope_angle)
-			referenceY = ring_center_y - ring_radius * cos(slope_angle)
+			y_distance = rolledDistance * sin_theta
 
-		cx, cy = GetCenterOfMass(ring_center_x, ring_center_y, ring_z, ring_radius, nob_at_ring, mass_of_ring, mass_of_nob)
-		torque = GetTorque(referenceX, cx, mass_of_ring + mass_of_nob, g)
-		I = GetMomentOfInertia(referenceX, referenceY, ring_center_x, ring_center_y, ring_radius, nob_at_ring, mass_of_ring, mass_of_nob)
-		rotation_acceleration = -torque / I
-		rotation_speed += rotation_acceleration * deltaT
+	ring_center_x += x_distance
+	ring_center_y += y_distance
+	if ring_center_y < ring_radius:
+		ring_center_y = ring_radius
+
+	if ring_center_x > slope_length and ring_center_x < slope_length + plane_length:
+		referenceX = ring_center_x
+		referenceY = ring_center_y - ring_radius
+	else:
+		referenceY = ring_center_y - ring_radius * cos(slope_angle)
+		if ring_center_x < slope_length:
+			referenceX = ring_center_x - ring_radius * sin(slope_angle)
+		else:
+			referenceX = ring_center_x + ring_radius * sin(slope_angle)
+		
+	cx, cy = GetCenterOfMass(ring_center_x, ring_center_y, ring_z, ring_radius, nob_at_ring, mass_of_ring, mass_of_nob)
+	torque = GetTorque(referenceX, cx, mass_of_ring + mass_of_nob, g)
+	I = GetMomentOfInertia(referenceX, referenceY, ring_center_x, ring_center_y, ring_radius, nob_at_ring, mass_of_ring, mass_of_nob)
+	rotation_acceleration = -torque / I
+	rotation_speed += rotation_acceleration * deltaT
 
 	DrawRing(ring_center_x, ring_center_y, ring_z, nob_at_ring, ring_radius)
 
