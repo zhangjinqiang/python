@@ -46,7 +46,7 @@ def ReSizeGLScene(Width, Height):
 
 g = 9.8 #gravitational acceleration
 pi = 3.1415926535897
-slope_length = 2.5
+slope_length = 3.5
 slope_width = 1.0
 slope_height = 1.3
 slope_angle = atan2(slope_height, slope_length)
@@ -56,11 +56,11 @@ ring_radius = 0.3
 ring_z = -slope_width/2.0
 ring_center_x = 0.0
 ring_center_y = slope_height + ring_radius
-nob_at_ring = pi * 0.5
+nob_at_ring = pi * 0.4
 rotation_acceleration = 0.0  #radians/sec
 rotation_speed = 0.0
 mass_of_ring = 1.0
-mass_of_nob = 0.0
+mass_of_nob = 8
 
 def DrawSlopeAndPlane():
 	global slope_length, slope_width, slope_height, slope_angle, plane_length
