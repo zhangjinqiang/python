@@ -46,28 +46,21 @@ def ReSizeGLScene(Width, Height):
 
 g = 9.8 #gravitational acceleration
 pi = 3.1415926535897
-slope_length = 3.5
+slope_length = 2.5
 slope_width = 1.0
 slope_height = 1.3
 slope_angle = atan2(slope_height, slope_length)
 plane_length = slope_length
-deltaT = 0.025
+deltaT = 0.021
 ring_radius = 0.3
 ring_z = -slope_width/2.0
 ring_center_x = 0.0
 ring_center_y = slope_height + ring_radius
-nob_at_ring = pi * 0.45
+nob_at_ring = pi * 0.5
 rotation_acceleration = 0.0  #radians/sec
 rotation_speed = 0.0
 mass_of_ring = 1.0
-mass_of_nob = 10.0
-
-def Initialize():
-	ring_center_x = 0.0
-	ring_center_y = slope_height + ring_radius
-	nob_at_ring = 0.0
-	rotation_acceleration = 0.0
-	rotation_speed = 0.0
+mass_of_nob = 0.0
 
 def DrawSlopeAndPlane():
 	global slope_length, slope_width, slope_height, slope_angle, plane_length
@@ -174,17 +167,15 @@ def GetCenterOfMass(geometricCenterX, geometricCenterY, z, radius, nobAngle, rin
 	glEnd();
 	return x, y
 
-#pointing out of screen is positive
+#with reference to geom center :pointing out of screen is positive
 def GetTorque(referenceX, massX, mass, g ):
 	r = referenceX - massX
 	torque = r * mass * g
 	return torque
 
-def GetMomentOfInertia(referenceX, referenceY, geometricCenterX, geometricCenterY, radius, nobAngle, ringMass, nobMass):
-	momentOfInertiaOfRing = 1.5 * ringMass * radius * radius
-	nobX = geometricCenterX + radius*cos(nobAngle)
-	dx = nobX - referenceX
-	momentOfInertiaOfNob = nobMass * dx*dx
+def GetMomentOfInertia(radius, ringMass, nobMass):
+	momentOfInertiaOfRing = 0.5 * ringMass * radius * radius
+	momentOfInertiaOfNob = nobMass * radius * radius
 	return momentOfInertiaOfRing + momentOfInertiaOfNob
 	
 # The main drawing function. 
@@ -198,7 +189,7 @@ def DrawGLScene():
 	glTranslatef(-5.3,-1.5,-10.0);			
 
 	DrawSlopeAndPlane()
-	
+
 	#calculate ring's position
 	rolledAngle = rotation_speed * deltaT
 	rolledDistance = rolledAngle * ring_radius
@@ -206,7 +197,6 @@ def DrawGLScene():
 	if nob_at_ring < -2 * pi:
 		nob_at_ring += 2 * pi
 
-	#calculate angular acceleration
 	if ring_center_x > slope_length and ring_center_x < slope_length + plane_length:
 		x_distance = rolledDistance
 		y_distance = 0.0
@@ -219,29 +209,31 @@ def DrawGLScene():
 			y_distance = -rolledDistance * sin_theta
 		else:
 			y_distance = rolledDistance * sin_theta
-
+			
 	ring_center_x += x_distance
 	ring_center_y += y_distance
 	if ring_center_y < ring_radius:
 		ring_center_y = ring_radius
 
-	if ring_center_x > slope_length and ring_center_x < slope_length + plane_length:
-		referenceX = ring_center_x
-		referenceY = ring_center_y - ring_radius
-	else:
-		referenceY = ring_center_y - ring_radius * cos(slope_angle)
-		if ring_center_x < slope_length:
-			referenceX = ring_center_x - ring_radius * sin(slope_angle)
-		else:
-			referenceX = ring_center_x + ring_radius * sin(slope_angle)
-		
-	cx, cy = GetCenterOfMass(ring_center_x, ring_center_y, ring_z, ring_radius, nob_at_ring, mass_of_ring, mass_of_nob)
-	torque = GetTorque(referenceX, cx, mass_of_ring + mass_of_nob, g)
-	I = GetMomentOfInertia(referenceX, referenceY, ring_center_x, ring_center_y, ring_radius, nob_at_ring, mass_of_ring, mass_of_nob)
-	rotation_acceleration = -torque / I
-	rotation_speed += rotation_acceleration * deltaT
+	#draw center of mass for debugging
+	GetCenterOfMass(ring_center_x, ring_center_y, ring_z, ring_radius, nob_at_ring, mass_of_ring, mass_of_nob)
 
 	DrawRing(ring_center_x, ring_center_y, ring_z, nob_at_ring, ring_radius)
+
+		#calculate angular acceleration
+	if ring_center_x > slope_length and ring_center_x < slope_length + plane_length:
+		ground_slope = 0.0
+	elif ring_center_x < slope_length:
+		ground_slope = slope_angle
+	else:
+		ground_slope = -slope_angle
+
+	I = GetMomentOfInertia(ring_radius, mass_of_ring, mass_of_nob)
+	T_nob = mass_of_nob * g * cos(nob_at_ring) * ring_radius
+	T_f = mass_of_ring * g * sin(ground_slope) * ring_radius
+	T_all = T_nob + T_f
+	rotation_acceleration = T_all / I
+	rotation_speed += rotation_acceleration * deltaT
 
 	# What values to use?  Well, if you have a FAST machine and a FAST 3D Card, then
 	# large values make an unpleasant display with flickering and tearing.  I found that
@@ -262,8 +254,6 @@ def main():
 	global window
 	glutInit(sys.argv)
 
-	Initialize()
-	
 	# Select type of Display mode:   
 	#  Double buffer 
 	#  RGBA color
